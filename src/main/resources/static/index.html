@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>katar · কাতার — Eid-rush train tickets</title>
+<meta name="description" content="A fair waiting room and seat-by-segment inventory for the Eid train ticket rush in Bangladesh. Built with Java 21, Spring Boot and PostgreSQL.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230b5d3b'/%3E%3Crect x='6' y='9' width='20' height='3' fill='%23efe6d2'/%3E%3Crect x='6' y='15' width='20' height='3' fill='%23efe6d2'/%3E%3Crect x='6' y='21' width='12' height='3' fill='%23c8102e'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anek+Bangla:wdth,wght@75..100,500..800&family=Hind+Siliguri:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="mast">
+  <div class="mast-in">
+    <a class="brand" href="/"><span class="bn">কাতার</span><span class="en">katar</span></a>
+    <p class="tag">A fair queue for the Eid ticket rush. <a href="https://github.com/Nafiz001/katar">How it works</a></p>
+  </div>
+</header>
+
+<main id="app" class="wrap">
+  <section class="train" id="train" hidden>
+    <p class="eyebrow" id="train-date"></p>
+    <h1><span id="train-no"></span> <span id="train-name"></span></h1>
+    <ol class="route" id="route"></ol>
+    <p class="hint" id="route-hint">Tap where you board, then where you get off.</p>
+  </section>
+
+  <section class="step" id="step-join" hidden>
+    <h2>Join the queue <span class="bn">লাইনে দাঁড়ান</span></h2>
+    <p class="lede" id="join-lede"></p>
+    <form id="join-form" class="row">
+      <label for="nid" class="sr">National ID number</label>
+      <input id="nid" inputmode="numeric" autocomplete="off" placeholder="National ID (10, 13 or 17 digits)" required>
+      <button type="submit">Join</button>
+    </form>
+    <p class="fine">Any 13-digit number works in the demo. Only a keyed hash of it is stored; one place per ID, so refreshing gains nothing.</p>
+    <p class="err" id="join-err" role="alert"></p>
+  </section>
+
+  <section class="step" id="step-queue" hidden>
+    <h2>You are in line <span class="bn">আপনি লাইনে আছেন</span></h2>
+    <div class="board" aria-live="polite">
+      <div class="board-num"><span id="ahead-bn"></span><small id="ahead-en"></small></div>
+      <p class="board-cap" id="ahead-cap">people ahead of you · আপনার সামনে</p>
+    </div>
+    <p class="lede" id="queue-note"></p>
+  </section>
+
+  <section class="step" id="step-seats" hidden>
+    <h2>Choose your seats <span class="bn">আসন বাছুন</span></h2>
+    <p class="lede"><span id="pass-left"></span> Up to four seats per person, held for ten minutes while you pay.</p>
+    <div class="coaches" id="coaches" role="tablist"></div>
+    <div class="coach-map" id="coach-map"></div>
+    <div class="basket" id="basket"></div>
+    <p class="err" id="seat-err" role="alert"></p>
+  </section>
+
+  <section class="step" id="step-ticket" hidden>
+    <h2>Your ticket <span class="bn">আপনার টিকিট</span></h2>
+    <div id="ticket"></div>
+    <p class="fine" id="verify-note"></p>
+  </section>
+</main>
+
+<footer class="foot">
+  <p>Demo: an hourly sale for train 753 runs with a simulated crowd. Payments go to a demo gateway; nothing is charged. Java 21 · Spring Boot · PostgreSQL. <a href="https://github.com/Nafiz001/katar">Source</a></p>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

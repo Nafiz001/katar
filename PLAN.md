@@ -53,7 +53,7 @@
 - [x] M3. Waiting room: join, position, watermark scheduler, admission pass (HMAC), one ticket per NID. Tests for order, fairness and rejoining.
 - [x] M4. Booking: hold API (needs a pass), buy with idempotency, mock payment and signed webhook, ticket issue with an offline-verifiable code, the 4-seats-per-NID rule. Tests.
 - [x] M5. SSE live streams, Prometheus metrics, rate limiting.
-- [ ] M6. UI: queue, then seat map (coach diagram), then ticket, served from static.
+- [x] M6. UI: queue, then seat map (coach diagram), then ticket, served from static.
 - [ ] M7. CI (GitHub Actions: `./mvnw verify`), Dockerfile (multi-stage, arm64 + amd64), image via portfolio-deploy's reusable image.yml.
 - [ ] M8. Deploy on the A1 (130.210.37.18) in portfolio-deploy's `vernissage/` stack with its own postgres, Caddy site katar.130-210-37-18.sslip.io. Seed a demo sale that reopens daily.
 - [ ] M9. k6 rush test, README with architecture, decisions and numbers. Then the portfolio, profile and CV (ask the user first).
