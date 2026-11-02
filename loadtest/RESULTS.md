@@ -4,7 +4,7 @@
 (`--katar.demo-admit=400 --katar.demo-room=3000 --katar.demo-crowd=false`),
 then `psql -f loadtest/check.sql`.
 
-**The machine matters.** These runs are on a laptop (Intel i5-1155G7, 8 GB,
+**The machine matters.** The laptop runs further down are on a laptop (Intel i5-1155G7, 8 GB,
 Windows 11) that runs k6's 800 virtual users, the JVM (384 MB heap) and
 PostgreSQL 18 at the same time. Read the latencies as a floor on what a real
 server does, not as its numbers.
