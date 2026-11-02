@@ -69,6 +69,25 @@ public class Sales {
                 .list();
     }
 
+    /** Sales still to open or open now, soonest first, with what they sell. */
+    public List<SaleSummary> upcoming(Instant now) {
+        return db.sql("""
+                SELECT s.id, s.opens_at, s.closes_at, t.number, t.name, j.service_date
+                FROM sale s JOIN journey j ON j.id = s.journey_id JOIN train t ON t.id = j.train_id
+                WHERE s.closes_at > :now
+                ORDER BY s.opens_at LIMIT 20
+                """)
+                .param("now", Timestamp.from(now))
+                .query((rs, n) -> new SaleSummary(rs.getLong("id"), rs.getInt("number"), rs.getString("name"),
+                        rs.getDate("service_date").toLocalDate(), rs.getTimestamp("opens_at").toInstant(),
+                        rs.getTimestamp("closes_at").toInstant()))
+                .list();
+    }
+
+    public record SaleSummary(long id, int trainNumber, String trainName, java.time.LocalDate serviceDate,
+            Instant opensAt, Instant closesAt) {
+    }
+
     private static Sale map(java.sql.ResultSet rs, int n) throws java.sql.SQLException {
         return new Sale(rs.getLong("id"), rs.getLong("journey_id"), rs.getTimestamp("opens_at").toInstant(),
                 rs.getTimestamp("closes_at").toInstant(), rs.getInt("admit_per_sec"), rs.getInt("max_active"),

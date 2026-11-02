@@ -52,11 +52,44 @@
 - [x] M2. Inventory core: segment masks, hold, release, expire sweeper. Concurrency tests: 200 threads on overlapping legs means exactly one winner; disjoint legs means all win.
 - [x] M3. Waiting room: join, position, watermark scheduler, admission pass (HMAC), one ticket per NID. Tests for order, fairness and rejoining.
 - [x] M4. Booking: hold API (needs a pass), buy with idempotency, mock payment and signed webhook, ticket issue with an offline-verifiable code, the 4-seats-per-NID rule. Tests.
-- [ ] M5. SSE live streams, Prometheus metrics, rate limiting.
+- [x] M5. SSE live streams, Prometheus metrics, rate limiting.
 - [ ] M6. UI: queue, then seat map (coach diagram), then ticket, served from static.
 - [ ] M7. CI (GitHub Actions: `./mvnw verify`), Dockerfile (multi-stage, arm64 + amd64), image via portfolio-deploy's reusable image.yml.
 - [ ] M8. Deploy on the A1 (130.210.37.18) in portfolio-deploy's `vernissage/` stack with its own postgres, Caddy site katar.130-210-37-18.sslip.io. Seed a demo sale that reopens daily.
 - [ ] M9. k6 rush test, README with architecture, decisions and numbers. Then the portfolio, profile and CV (ask the user first).
+
+## Demo mode (KATAR_DEMO=true)
+
+- Every hour the sale for train 753, ten days ahead, starts afresh. It opens at :01, so visitors can see the pre-opening wait. It admits 5 people a second, with a room of 150.
+- Bots keep about 160 people waiting, so a visitor waits roughly 30 seconds. Bots buy one or two seats on random legs, and stop buying at 55% of seat-legs sold.
+- Checked locally on 2026-11-02: a visitor was admitted after 34 s, held an AC seat, paid, and the ticket verified.
+- Local run: the  cluster on port 5492 (waiting for server to start....2026-11-02 16:28:33.567 +06 [12572] FATAL:  lock file "postmaster.pid" already exists
+2026-11-02 16:28:33.567 +06 [12572] HINT:  Is another postmaster (PID 19560) running in data directory "E:/Backend_Projects/katar/.dev/pg"?
+ stopped waiting), then 
+  .   ____          _            __ _ _
+ /\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ ( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \  \/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.2)
+
+2026-11-02T16:28:35.605+06:00  INFO 18364 --- [katar] [           main] dev.nafiz.katar.KatarApplication         : Starting KatarApplication v0.0.1-SNAPSHOT using Java 21.0.5 with PID 18364 (E:\Backend_Projects\katar	arget\katar-0.0.1-SNAPSHOT.jar started by nafiz in E:\Backend_Projects\katar)
+2026-11-02T16:28:35.613+06:00  INFO 18364 --- [katar] [           main] dev.nafiz.katar.KatarApplication         : No active profile set, falling back to 1 default profile: "default"
+2026-11-02T16:28:39.132+06:00  INFO 18364 --- [katar] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8093 (http)
+2026-11-02T16:28:39.156+06:00  INFO 18364 --- [katar] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-11-02T16:28:39.156+06:00  INFO 18364 --- [katar] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.27]
+2026-11-02T16:28:39.208+06:00  INFO 18364 --- [katar] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 3456 ms
+2026-11-02T16:28:40.070+06:00  INFO 18364 --- [katar] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-11-02T16:28:40.410+06:00  INFO 18364 --- [katar] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@684372d0
+2026-11-02T16:28:40.413+06:00  INFO 18364 --- [katar] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-11-02T16:28:40.448+06:00  INFO 18364 --- [katar] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5492/katar (PostgreSQL 18.1)
+2026-11-02T16:28:40.585+06:00  INFO 18364 --- [katar] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 2 migrations (execution time 00:00.066s)
+2026-11-02T16:28:40.606+06:00  INFO 18364 --- [katar] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 2
+2026-11-02T16:28:40.612+06:00  INFO 18364 --- [katar] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-11-02T16:28:40.938+06:00  WARN 18364 --- [katar] [           main] dev.nafiz.katar.booking.TicketSigner     : No KATAR_TICKET_PRIVATE_KEY set: tickets are signed with a key made at startup and will not verify after a restart
+2026-11-02T16:28:42.582+06:00  INFO 18364 --- [katar] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2026-11-02T16:28:42.874+06:00  INFO 18364 --- [katar] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8093 (http) with context path '/'
+2026-11-02T16:28:42.908+06:00  INFO 18364 --- [katar] [           main] dev.nafiz.katar.KatarApplication         : Started KatarApplication in 8.262 seconds (process running for 9.255).
 
 ## Notes for whoever resumes
 

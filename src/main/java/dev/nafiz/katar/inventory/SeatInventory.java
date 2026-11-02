@@ -100,6 +100,24 @@ public class SeatInventory {
                 .list();
     }
 
+    /** Every seat of one coach, and whether it is free for a journey's legs. */
+    public List<SeatState> coachMap(long journeyId, String coachCode, long mask) {
+        return db.sql("""
+                SELECT s.number, (s.taken & :mask) = 0 AS free
+                FROM seat s JOIN coach c ON c.id = s.coach_id
+                WHERE s.journey_id = :journey AND c.code = :code
+                ORDER BY s.number
+                """)
+                .param("journey", journeyId)
+                .param("code", coachCode)
+                .param("mask", mask)
+                .query((rs, n) -> new SeatState(rs.getInt("number"), rs.getBoolean("free")))
+                .list();
+    }
+
+    public record SeatState(int number, boolean free) {
+    }
+
     public record CoachAvailability(int coachId, String code, String travelClass, int seats, int free) {
     }
 }
