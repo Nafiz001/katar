@@ -17,6 +17,8 @@
    - Admitted users get a short-lived HMAC-signed *admission pass*. Every seat endpoint requires it.
    - Each national ID or phone can hold one queue ticket per sale. Rejoining returns the same ticket, so refreshing the page can't skip ahead.
    - Inactive admitted users expire, so their capacity frees up.
+   - Early joiners (before opening) have no ticket; at opening they are shuffled at random, so camping on the page gains nothing.
+   - A turn not claimed within the claim window (2 minutes) lapses, so no-shows can't block the room.
 
 2. **Seats sold by the segment, without double-selling.**
    - A route is a list of stations, so a journey is a contiguous set of legs: a bitmask.
@@ -47,7 +49,7 @@
 
 - [x] M1. Scaffold: Spring Initializr project, Flyway schema (stations, trains, routes, coaches, seats, sales, queue, holds, tickets), seed data for a real route (Dhaka to Rajshahi, Silk City Express: stations and legs), health endpoint, embedded-pg test harness.
 - [x] M2. Inventory core: segment masks, hold, release, expire sweeper. Concurrency tests: 200 threads on overlapping legs means exactly one winner; disjoint legs means all win.
-- [ ] M3. Waiting room: join, position, watermark scheduler, admission pass (HMAC), one ticket per NID. Tests for order, fairness and rejoining.
+- [x] M3. Waiting room: join, position, watermark scheduler, admission pass (HMAC), one ticket per NID. Tests for order, fairness and rejoining.
 - [ ] M4. Booking: hold API (needs a pass), buy with idempotency, mock payment and signed webhook, ticket issue with an offline-verifiable code, the 4-seats-per-NID rule. Tests.
 - [ ] M5. SSE live streams, Prometheus metrics, rate limiting.
 - [ ] M6. UI: queue, then seat map (coach diagram), then ticket, served from static.

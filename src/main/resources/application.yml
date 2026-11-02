@@ -20,6 +20,7 @@ katar:
   payment-secret: ${KATAR_PAYMENT_SECRET:dev-only-payment-secret-change-me}
   hold-ttl: 10m
   pass-ttl: 15m
+  claim-window: 2m
   max-seats-per-person: 4
   admitter-interval: 1s
   sweeper-interval: 5s

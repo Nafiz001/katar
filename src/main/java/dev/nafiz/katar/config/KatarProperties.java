@@ -24,6 +24,8 @@ public record KatarProperties(
         @NotNull Duration holdTtl,
         /** How long an admitted person may stay in the booking room. */
         @NotNull Duration passTtl,
+        /** How long someone whose turn has come may take to claim their pass. */
+        @NotNull Duration claimWindow,
         /** Bangladesh Railway's limit: seats per person per journey. */
         @Min(1) int maxSeatsPerPerson,
         @NotNull Duration admitterInterval,

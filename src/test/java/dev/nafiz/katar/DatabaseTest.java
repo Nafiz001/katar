@@ -2,10 +2,15 @@ package dev.nafiz.katar;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Instant;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -18,6 +23,7 @@ import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
  * prove nothing. Scheduled jobs are off; tests drive them by hand.
  */
 @SpringBootTest(properties = "katar.scheduling=false")
+@Import(DatabaseTest.TestClock.class)
 public abstract class DatabaseTest {
 
     private static final EmbeddedPostgres PG;
@@ -45,12 +51,35 @@ public abstract class DatabaseTest {
         registry.add("spring.datasource.hikari.maximum-pool-size", () -> "40");
     }
 
+    /** 07:59 on the morning a sale opens, Bangladesh time. */
+    public static final Instant T0 = Instant.parse("2027-03-20T01:59:00Z");
+
+    @TestConfiguration
+    public static class TestClock {
+        @Bean
+        @Primary
+        MutableClock testClock() {
+            return new MutableClock(T0);
+        }
+    }
+
     @Autowired
     protected JdbcClient db;
+    @Autowired
+    protected MutableClock clock;
 
-    /** Every test starts from the reference data alone. */
+    /** Every test starts from the reference data alone, at T0. */
     @BeforeEach
     void clean() {
+        clock.set(T0);
         db.sql("TRUNCATE ticket, booking, hold, queue_entry, sale, seat, journey RESTART IDENTITY CASCADE").update();
+        // each sale made its own ticket sequence, which a truncate leaves behind
+        db.sql("""
+                DO $$ DECLARE s text; BEGIN
+                  FOR s IN SELECT sequencename FROM pg_sequences WHERE sequencename LIKE 'sale\\_%\\_ticket' LOOP
+                    EXECUTE format('DROP SEQUENCE %I', s);
+                  END LOOP;
+                END $$
+                """).update();
     }
 }

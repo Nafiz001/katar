@@ -78,25 +78,32 @@ CREATE TABLE sale (
     -- Everyone holding a queue ticket at or below this number may come in.
     -- Only the admitter moves it, and only forwards.
     admitted_upto bigint      NOT NULL DEFAULT 0,
+    -- People who join before opening are ordered at random when it opens,
+    -- so arriving early gains nothing and nobody camps on the page.
+    shuffled      boolean     NOT NULL DEFAULT false,
     ticket_seq    text        NOT NULL  -- name of this sale's own sequence
 );
 
 -- A place in the queue. The ticket comes from the sale's own sequence, so
 -- your position is simply ticket - admitted_upto: no counting, no reshuffles.
--- One place per person per sale: rejoining returns the same ticket.
+-- Early joiners have no ticket until the sale opens and they are shuffled.
+-- One place per person per sale: rejoining returns the same place.
 CREATE TABLE queue_entry (
+    id           bigserial   PRIMARY KEY,
     sale_id      bigint      NOT NULL REFERENCES sale,
-    ticket       bigint      NOT NULL,
+    ticket       bigint,
     person       text        NOT NULL, -- keyed hash of the national ID, never the ID itself
-    joined_at    timestamptz NOT NULL DEFAULT now(),
+    joined_at    timestamptz NOT NULL,
     state        text        NOT NULL DEFAULT 'WAITING'
                  CHECK (state IN ('WAITING', 'ADMITTED', 'DONE', 'EXPIRED')),
-    admitted_at  timestamptz,
+    offered_at   timestamptz, -- when the watermark passed this ticket: the claim window starts
+    admitted_at  timestamptz, -- when the pass was claimed
     pass_expires timestamptz,
-    PRIMARY KEY (sale_id, ticket),
+    UNIQUE (sale_id, ticket),
     UNIQUE (sale_id, person)
 );
 CREATE INDEX queue_active ON queue_entry (sale_id, pass_expires) WHERE state = 'ADMITTED';
+CREATE INDEX queue_offered ON queue_entry (sale_id, offered_at) WHERE state = 'WAITING' AND offered_at IS NOT NULL;
 
 -- A seat held for a journey's legs while the buyer pays.
 CREATE TABLE hold (
