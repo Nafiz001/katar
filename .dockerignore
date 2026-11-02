@@ -1,0 +1,5 @@
+target
+.dev
+.git
+docs
+*.log
