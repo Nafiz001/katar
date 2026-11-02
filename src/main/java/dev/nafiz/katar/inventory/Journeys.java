@@ -2,6 +2,8 @@ package dev.nafiz.katar.inventory;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -12,6 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class Journeys {
 
     private final JdbcClient db;
+    // A journey's route and coaches never change once it exists, so the hot
+    // paths (every hold, every seat map) read them from memory.
+    private final Map<Long, List<Stop>> stops = new ConcurrentHashMap<>();
+    private final Map<Long, Map<String, Integer>> coaches = new ConcurrentHashMap<>();
 
     public Journeys(JdbcClient db) {
         this.db = db;
@@ -57,8 +63,30 @@ public class Journeys {
         return id;
     }
 
+    /** Forgets cached routes; for tests, which reuse ids after a truncate (production never does). */
+    public void clearCache() {
+        stops.clear();
+        coaches.clear();
+    }
+
     /** The stops of the train a journey runs, in order. */
     public List<Stop> stops(long journeyId) {
+        return stops.computeIfAbsent(journeyId, this::loadStops);
+    }
+
+    /** A coach's id from its code, on the train a journey runs. */
+    public int coachId(long journeyId, String code) {
+        Integer id = coaches.computeIfAbsent(journeyId, j -> db.sql("""
+                SELECT c.code, c.id FROM coach c JOIN journey jy ON jy.train_id = c.train_id WHERE jy.id = :journey
+                """).param("journey", j).query((rs, n) -> Map.entry(rs.getString(1), rs.getInt(2))).list().stream()
+                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))).get(code);
+        if (id == null) {
+            throw new IllegalArgumentException("this train has no coach " + code);
+        }
+        return id;
+    }
+
+    private List<Stop> loadStops(long journeyId) {
         return db.sql("""
                 SELECT rs.seq, s.code, s.name, s.name_bn, rs.depart_min
                 FROM journey j
@@ -75,16 +103,7 @@ public class Journeys {
 
     /** The stop number of a station on a journey's route. */
     public int seqOf(long journeyId, String stationCode) {
-        return db.sql("""
-                SELECT rs.seq FROM journey j
-                JOIN route_stop rs ON rs.train_id = j.train_id
-                JOIN station s ON s.id = rs.station_id
-                WHERE j.id = :journey AND s.code = :code
-                """)
-                .param("journey", journeyId)
-                .param("code", stationCode)
-                .query(Integer.class)
-                .optional()
+        return stops(journeyId).stream().filter(s -> s.code().equals(stationCode)).mapToInt(Stop::seq).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("this train does not stop at " + stationCode));
     }
 

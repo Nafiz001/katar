@@ -155,15 +155,15 @@ public class SaleController {
     /** Free seats per coach for a journey between two stations. */
     @GetMapping("/{id}/availability")
     List<CoachAvailability> availability(@PathVariable long id, @RequestParam String from, @RequestParam String to) {
-        Sale sale = sales.get(id);
-        return inventory.availability(sale.journeyId(), mask(sale, from, to));
+        long journey = sales.journeyOf(id);
+        return inventory.availability(journey, mask(journey, from, to));
     }
 
     @GetMapping("/{id}/coaches/{coach}")
     List<SeatState> coach(@PathVariable long id, @PathVariable String coach, @RequestParam String from,
             @RequestParam String to) {
-        Sale sale = sales.get(id);
-        return inventory.coachMap(sale.journeyId(), coach, mask(sale, from, to));
+        long journey = sales.journeyOf(id);
+        return inventory.coachMap(journey, coach, mask(journey, from, to));
     }
 
     record HoldRequest(@NotBlank String from, @NotBlank String to, @NotBlank String coach, Integer number) {
@@ -207,9 +207,9 @@ public class SaleController {
         return room.verify(saleId, authorization.substring(5).trim());
     }
 
-    private long mask(Sale sale, String from, String to) {
-        int a = journeys.seqOf(sale.journeyId(), from);
-        int b = journeys.seqOf(sale.journeyId(), to);
+    private long mask(long journeyId, String from, String to) {
+        int a = journeys.seqOf(journeyId, from);
+        int b = journeys.seqOf(journeyId, to);
         if (b <= a) {
             throw KatarException.unprocessable("bad_route", "the train reaches " + from + " after " + to);
         }

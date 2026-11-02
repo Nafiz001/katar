@@ -51,9 +51,9 @@ public class Holds {
      */
     @Transactional
     public Hold hold(Admitted who, String from, String to, String coach, Integer number) {
-        Sale sale = sales.get(who.saleId());
-        int a = journeys.seqOf(sale.journeyId(), from);
-        int b = journeys.seqOf(sale.journeyId(), to);
+        long journeyId = sales.journeyOf(who.saleId());
+        int a = journeys.seqOf(journeyId, from);
+        int b = journeys.seqOf(journeyId, to);
         if (b <= a) {
             throw KatarException.unprocessable("bad_route", "the train reaches " + from + " after " + to);
         }
@@ -63,7 +63,7 @@ public class Holds {
         // be beaten by firing four requests in parallel. Other people are not
         // affected: the lock is keyed by person.
         db.sql("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))")
-                .param("key", "hold|" + sale.id() + "|" + who.person())
+                .param("key", "hold|" + who.saleId() + "|" + who.person())
                 .query(Object.class).single();
         Instant now = clock.instant();
         int mine = db.sql("""
@@ -71,7 +71,7 @@ public class Holds {
                 WHERE sale_id = :sale AND person = :person
                   AND (state = 'BOOKED' OR (state = 'HELD' AND expires_at > :now))
                 """)
-                .param("sale", sale.id())
+                .param("sale", who.saleId())
                 .param("person", who.person())
                 .param("now", Timestamp.from(now))
                 .query(Integer.class)
@@ -83,21 +83,12 @@ public class Holds {
 
         long seatId;
         if (number != null) {
-            seatId = journeys.seatId(sale.journeyId(), coach, number);
+            seatId = journeys.seatId(journeyId, coach, number);
             if (!inventory.claim(seatId, mask)) {
                 throw KatarException.conflict("seat_taken", "that seat is taken for part of your journey");
             }
         } else {
-            int coachId = db.sql("""
-                    SELECT c.id FROM coach c JOIN journey j ON j.train_id = c.train_id
-                    WHERE j.id = :journey AND c.code = :code
-                    """)
-                    .param("journey", sale.journeyId())
-                    .param("code", coach)
-                    .query(Integer.class)
-                    .optional()
-                    .orElseThrow(() -> KatarException.notFound("coach " + coach));
-            seatId = inventory.claimAny(sale.journeyId(), coachId, mask);
+            seatId = inventory.claimAny(journeyId, journeys.coachId(journeyId, coach), mask);
             if (seatId < 0) {
                 throw KatarException.conflict("coach_full", "no seat in " + coach + " is free for your journey");
             }
@@ -110,7 +101,7 @@ public class Holds {
                 VALUES (:id, :sale, :seat, :person, :a, :b, :mask, :now, :expires)
                 """)
                 .param("id", id)
-                .param("sale", sale.id())
+                .param("sale", who.saleId())
                 .param("seat", seatId)
                 .param("person", who.person())
                 .param("a", a)

@@ -39,3 +39,8 @@ management:
 
 server:
   shutdown: graceful
+  tomcat:
+    # A sale opening is thousands of connections in the same second. The
+    # default backlog of 100 refuses most of them at the TCP level before
+    # katar sees them (measured: 576 of 800 refused in the rush test).
+    accept-count: 1000

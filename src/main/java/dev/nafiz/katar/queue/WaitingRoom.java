@@ -3,7 +3,9 @@ package dev.nafiz.katar.queue;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,8 @@ public class WaitingRoom {
     private final Clock clock;
     private final KatarProperties props;
     private final Signer passes;
+    /** Sales seen shuffled. The flag only ever turns on, so once seen it need not be read again. */
+    private final Map<Long, Sale> shuffled = new ConcurrentHashMap<>();
 
     public WaitingRoom(JdbcClient db, Sales sales, Clock clock, KatarProperties props) {
         this.db = db;
@@ -53,22 +57,35 @@ public class WaitingRoom {
         // exclusively, so nobody can join "between" the shuffle and the
         // first numbered ticket.
         db.sql("SELECT pg_advisory_xact_lock_shared(:key)").param("key", lockKey(saleId)).query(Object.class).single();
-        Sale sale = sales.get(saleId);
+        Sale sale = shuffled.get(saleId);
+        if (sale == null) {
+            sale = sales.get(saleId);
+            if (sale.shuffled()) {
+                shuffled.put(saleId, sale);
+            }
+        }
         if (!now.isBefore(sale.closesAt())) {
             throw KatarException.conflict("sale_closed", "this sale has closed");
         }
-        Optional<Place> existing = find(saleId, person);
-        if (existing.isPresent()) {
-            return existing.get();
-        }
         if (sale.shuffled()) {
-            db.sql("INSERT INTO queue_entry (sale_id, ticket, person, joined_at) "
-                    + "VALUES (:sale, nextval('" + sale.ticketSeq() + "'), :person, :now) "
-                    + "ON CONFLICT (sale_id, person) DO NOTHING")
+            // The common case during a rush: one statement takes a ticket and
+            // returns the new place. Only someone already in line falls
+            // through to the lookup below. (A conflict still spends one
+            // sequence number: tickets can skip, never repeat.)
+            Optional<Place> joined = db.sql("WITH ins AS (INSERT INTO queue_entry (sale_id, ticket, person, joined_at) "
+                    + "SELECT :sale, nextval('" + sale.ticketSeq() + "'), :person, :now "
+                    + "WHERE NOT EXISTS (SELECT 1 FROM queue_entry WHERE sale_id = :sale AND person = :person) "
+                    + "ON CONFLICT (sale_id, person) DO NOTHING RETURNING ticket, state) "
+                    + "SELECT ins.ticket, ins.state, s.admitted_upto, s.opens_at FROM ins, sale s WHERE s.id = :sale")
                     .param("sale", saleId)
                     .param("person", person)
                     .param("now", Timestamp.from(now))
-                    .update();
+                    .query((rs, n) -> Place.of(saleId, rs.getLong("ticket"), rs.getString("state"),
+                            rs.getLong("admitted_upto"), rs.getTimestamp("opens_at").toInstant(), null))
+                    .optional();
+            if (joined.isPresent()) {
+                return joined.get();
+            }
         } else {
             db.sql("""
                     INSERT INTO queue_entry (sale_id, person, joined_at) VALUES (:sale, :person, :now)
@@ -80,6 +97,11 @@ public class WaitingRoom {
                     .update();
         }
         return find(saleId, person).orElseThrow();
+    }
+
+    /** Forgets which sales were seen shuffled; for tests, which reuse sale ids (production never does). */
+    public void clearCache() {
+        shuffled.clear();
     }
 
     /** Where a person stands, without joining. */

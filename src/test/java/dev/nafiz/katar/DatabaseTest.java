@@ -67,11 +67,20 @@ public abstract class DatabaseTest {
     protected JdbcClient db;
     @Autowired
     protected MutableClock clock;
+    @Autowired
+    private dev.nafiz.katar.queue.Sales salesCache;
+    @Autowired
+    private dev.nafiz.katar.inventory.Journeys journeysCache;
+    @Autowired
+    private dev.nafiz.katar.queue.WaitingRoom roomCache;
 
     /** Every test starts from the reference data alone, at T0. */
     @BeforeEach
     void clean() {
         clock.set(T0);
+        salesCache.clearCache();
+        journeysCache.clearCache();
+        roomCache.clearCache();
         db.sql("TRUNCATE ticket, booking, hold, queue_entry, sale, seat, journey RESTART IDENTITY CASCADE").update();
         // each sale made its own ticket sequence, which a truncate leaves behind
         db.sql("""

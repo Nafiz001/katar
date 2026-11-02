@@ -12,6 +12,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -58,18 +59,27 @@ public class Demo {
     private final JdbcClient db;
     private final Journeys journeys;
     private final Sales sales;
-    private final WaitingRoom room;
+    private final WaitingRoom waitingRoom;
     private final Holds holds;
     private final Bookings bookings;
     private final Payments payments;
     private final Clock clock;
+    /** Admissions per second and room size of the demo sale; a load test raises both. */
+    private final int admitPerSec;
+    private final int room;
+    /** The simulated crowd; a load test turns it off and brings its own. */
+    private final boolean crowd;
 
     public Demo(JdbcClient db, Journeys journeys, Sales sales, WaitingRoom room, Holds holds, Bookings bookings,
-            Payments payments, Clock clock) {
+            Payments payments, Clock clock, @Value("${katar.demo-admit:5}") int admitPerSec,
+            @Value("${katar.demo-room:150}") int roomSize, @Value("${katar.demo-crowd:true}") boolean crowd) {
+        this.admitPerSec = admitPerSec;
+        this.room = roomSize;
+        this.crowd = crowd;
         this.db = db;
         this.journeys = journeys;
         this.sales = sales;
-        this.room = room;
+        this.waitingRoom = room;
         this.holds = holds;
         this.bookings = bookings;
         this.payments = payments;
@@ -105,7 +115,7 @@ public class Demo {
             wipe(current);
         }
         // Yesterday's demo journey may still hold an old sale; it is left as history.
-        Sale sale = sales.create(journey, hour.plusSeconds(60), hour.plus(1, ChronoUnit.HOURS), 5, 150);
+        Sale sale = sales.create(journey, hour.plusSeconds(60), hour.plus(1, ChronoUnit.HOURS), admitPerSec, room);
         log.info("demo: sale {} for train {} on {} opens at {}", sale.id(), TRAIN, date, sale.opensAt());
     }
 
@@ -123,6 +133,9 @@ public class Demo {
     /** Once a second: top up the crowd, then let admitted bots shop. */
     @Scheduled(fixedDelay = 1000, initialDelay = 5000)
     void crowd() {
+        if (!crowd) {
+            return;
+        }
         Instant now = clock.instant();
         for (Sale sale : sales.openAt(now)) {
             long waiting = db.sql("""
@@ -132,7 +145,7 @@ public class Demo {
             ThreadLocalRandom r = ThreadLocalRandom.current();
             int joins = waiting < WAITING_TARGET ? r.nextInt(8, 16) : r.nextInt(0, 3);
             for (int i = 0; i < joins; i++) {
-                room.join(sale.id(), "bot-" + UUID.randomUUID());
+                waitingRoom.join(sale.id(), "bot-" + UUID.randomUUID());
             }
             double sold = db.sql("""
                     SELECT coalesce(sum(bit_count(taken::bit(64))), 0)::float / (count(*) * :legs)
@@ -153,9 +166,9 @@ public class Demo {
     /** One bot's visit: claim the pass, hold one to four seats, and usually pay. */
     private void shop(Sale sale, String bot, ThreadLocalRandom r, boolean buy) {
         try {
-            Admitted who = room.verify(sale.id(), room.claimPass(sale.id(), bot).token());
+            Admitted who = waitingRoom.verify(sale.id(), waitingRoom.claimPass(sale.id(), bot).token());
             if (!buy) {
-                room.finish(sale.id(), bot); // looked, found it busy, left
+                waitingRoom.finish(sale.id(), bot); // looked, found it busy, left
                 return;
             }
             int a = r.nextInt(0, STOPS.length - 1);
@@ -174,12 +187,12 @@ public class Demo {
                 for (UUID h : held) {
                     holds.release(who, h);
                 }
-                room.finish(sale.id(), bot); // gave up
+                waitingRoom.finish(sale.id(), bot); // gave up
                 return;
             }
             payments.payDemo(bookings.create(who, "bot-" + UUID.randomUUID(), held).id());
         } catch (KatarException e) {
-            room.finish(sale.id(), bot);
+            waitingRoom.finish(sale.id(), bot);
         }
     }
 }

@@ -3,6 +3,8 @@ package dev.nafiz.katar.queue;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -15,6 +17,8 @@ import dev.nafiz.katar.config.KatarException;
 public class Sales {
 
     private final JdbcClient db;
+    /** A sale's journey never changes; holds and seat maps look it up constantly. */
+    private final Map<Long, Long> journeyOf = new ConcurrentHashMap<>();
 
     public Sales(JdbcClient db) {
         this.db = db;
@@ -43,6 +47,15 @@ public class Sales {
         db.sql("CREATE SEQUENCE " + seq + " MINVALUE 1 START 1 CACHE 1").update();
         db.sql("UPDATE sale SET ticket_seq = :seq WHERE id = :id").param("seq", seq).param("id", id).update();
         return get(id);
+    }
+
+    /** Forgets cached sales; for tests, which reuse ids after a truncate (production never does). */
+    public void clearCache() {
+        journeyOf.clear();
+    }
+
+    public long journeyOf(long saleId) {
+        return journeyOf.computeIfAbsent(saleId, id -> get(id).journeyId());
     }
 
     public Sale get(long id) {
