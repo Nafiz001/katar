@@ -56,7 +56,7 @@
 - [x] M6. UI: queue, then seat map (coach diagram), then ticket, served from static.
 - [x] M7. CI (GitHub Actions: `./mvnw verify`), Dockerfile (multi-stage, arm64 + amd64), image via portfolio-deploy's reusable image.yml.
 - [ ] M8. Deploy on the A1 (130.210.37.18) in portfolio-deploy's `vernissage/` stack with its own postgres, Caddy site katar.130-210-37-18.sslip.io. Seed a demo sale that reopens daily.
-- [ ] M9. k6 rush test, README with architecture, decisions and numbers. Then the portfolio, profile and CV (ask the user first).
+- [~] M9. k6 rush test, README with architecture, decisions and numbers. Then the portfolio, profile and CV (ask the user first).
 
 ## Demo mode (KATAR_DEMO=true)
 
@@ -64,6 +64,15 @@
 - Bots keep about 160 people waiting, so a visitor waits roughly 30 seconds. Bots buy one or two seats on random legs, and stop buying at 55% of seat-legs sold.
 - Checked locally on 2026-11-02: a visitor was admitted after 34 s, held an AC seat, paid, and the ticket verified.
 - Local run: start the `.dev/pg` cluster on port 5492 (`pg_ctl -D .dev/pg -o "-p 5492" start`), then `java -jar target/katar-0.0.1-SNAPSHOT.jar --server.port=8093 --katar.demo=true`.
+
+## State (2026-11-02, end of the first session)
+
+- M1 to M7 are done and committed. 35 tests pass. There's a README, a rush test and results (`loadtest/RESULTS.md`), and screenshots in `docs/`.
+- **M8 is blocked:** creating the public GitHub repo was refused by the permission system ("Create Public Surface"). The user must allow it, or run `gh repo create Nafiz001/katar --public --source . --remote origin --push` themselves. After the push, CI runs the tests and then builds `ghcr.io/nafiz001/katar`.
+- portfolio-deploy already has a LOCAL commit, not pushed: "Add katar to the Ampere stack". It adds the compose services `katar-db` (pg18) and `katar`, a Caddy site, and `init-env.sh` secrets.
+  - The existing server `.env` lacks the KATAR_* variables. On the server, append them by running the katar lines of `init-env.sh`. Never paste secrets into chat.
+  - Then `git pull`, `docker compose up -d katar-db katar`, and `docker compose restart caddy` (the Caddyfile is bind-mounted, see memory).
+- After deploying: re-run the rush test against the A1 and add those numbers to RESULTS.md and the README. Add the live link to the README. Then the portfolio, profile and CV (ask the user first).
 
 ## Notes for whoever resumes
 
