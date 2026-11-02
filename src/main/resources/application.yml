@@ -15,7 +15,9 @@ katar:
   # Secrets come from the environment in production. The dev values below are
   # deliberately obvious so they can never be mistaken for real ones.
   pass-secret: ${KATAR_PASS_SECRET:dev-only-pass-secret-change-me}
-  ticket-secret: ${KATAR_TICKET_SECRET:dev-only-ticket-secret-change-me}
+  # Ed25519 private key (PKCS#8, base64) that signs tickets. Empty: a fresh key
+  # is made at startup, fine for development, useless for verifying tickets later.
+  ticket-private-key: ${KATAR_TICKET_PRIVATE_KEY:}
   person-pepper: ${KATAR_PERSON_PEPPER:dev-only-pepper-change-me}
   payment-secret: ${KATAR_PAYMENT_SECRET:dev-only-payment-secret-change-me}
   hold-ttl: 10m

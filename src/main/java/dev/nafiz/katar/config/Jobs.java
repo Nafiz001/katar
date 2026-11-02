@@ -4,6 +4,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import dev.nafiz.katar.booking.Holds;
 import dev.nafiz.katar.queue.Admitter;
 
 /**
@@ -15,13 +16,23 @@ import dev.nafiz.katar.queue.Admitter;
 public class Jobs {
 
     private final Admitter admitter;
+    private final Holds holds;
 
-    public Jobs(Admitter admitter) {
+    public Jobs(Admitter admitter, Holds holds) {
         this.admitter = admitter;
+        this.holds = holds;
     }
 
     @Scheduled(fixedDelayString = "${katar.admitter-interval}")
     void admit() {
         admitter.tick();
+    }
+
+    /** Gives back seats whose holds ran out, in batches until none are due. */
+    @Scheduled(fixedDelayString = "${katar.sweeper-interval}")
+    void sweep() {
+        while (holds.sweep() == 500) {
+            // a full batch: there may be more due right now
+        }
     }
 }

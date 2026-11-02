@@ -26,7 +26,8 @@
    - A hold is ONE statement: `UPDATE seat SET taken = taken | :mask WHERE id = :id AND (taken & :mask) = 0`. If no row is updated, someone else got an overlapping leg. There's no read-then-write race, and no table lock.
    - A hold has a TTL (default 10 minutes). Expiring releases it with `taken & ~mask`. A sweeper runs `@Scheduled` and uses `SKIP LOCKED`.
    - Buying converts the hold to a ticket. It's idempotent via an `Idempotency-Key` header. Payment is simulated by a mock gateway that calls a signed webhook.
-   - The ticket carries an offline-verifiable HMAC code, so an inspector can check it without the network.
+   - The ticket code is signed with Ed25519: an inspector's phone holds only the public key, verifies offline, and a lost phone cannot forge tickets.
+   - A payment arriving after its seats expired cancels the booking and reports REFUND, so nobody pays without a seat.
    - Limit: 4 seats per national ID per train-day (BD railway rule).
 
 ## Supporting pieces
@@ -50,7 +51,7 @@
 - [x] M1. Scaffold: Spring Initializr project, Flyway schema (stations, trains, routes, coaches, seats, sales, queue, holds, tickets), seed data for a real route (Dhaka to Rajshahi, Silk City Express: stations and legs), health endpoint, embedded-pg test harness.
 - [x] M2. Inventory core: segment masks, hold, release, expire sweeper. Concurrency tests: 200 threads on overlapping legs means exactly one winner; disjoint legs means all win.
 - [x] M3. Waiting room: join, position, watermark scheduler, admission pass (HMAC), one ticket per NID. Tests for order, fairness and rejoining.
-- [ ] M4. Booking: hold API (needs a pass), buy with idempotency, mock payment and signed webhook, ticket issue with an offline-verifiable code, the 4-seats-per-NID rule. Tests.
+- [x] M4. Booking: hold API (needs a pass), buy with idempotency, mock payment and signed webhook, ticket issue with an offline-verifiable code, the 4-seats-per-NID rule. Tests.
 - [ ] M5. SSE live streams, Prometheus metrics, rate limiting.
 - [ ] M6. UI: queue, then seat map (coach diagram), then ticket, served from static.
 - [ ] M7. CI (GitHub Actions: `./mvnw verify`), Dockerfile (multi-stage, arm64 + amd64), image via portfolio-deploy's reusable image.yml.

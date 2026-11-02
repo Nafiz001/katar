@@ -14,8 +14,11 @@ import jakarta.validation.constraints.NotNull;
 public record KatarProperties(
         /** Signs admission passes. */
         @NotBlank String passSecret,
-        /** Signs ticket codes, so inspectors can verify them offline. */
-        @NotBlank String ticketSecret,
+        /**
+         * Ed25519 private key (PKCS#8, base64) that signs tickets. Inspectors
+         * verify with the public half, offline. Blank: generated at startup.
+         */
+        String ticketPrivateKey,
         /** Keys the hash of a national ID: the database never sees the ID itself. */
         @NotBlank String personPepper,
         /** Shared with the payment gateway, to sign its webhooks. */
