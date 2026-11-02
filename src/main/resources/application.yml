@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: katar
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: ${KATAR_DB_URL:jdbc:postgresql://localhost:5492/katar}
+    username: ${KATAR_DB_USER:katar}
+    password: ${KATAR_DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${KATAR_DB_POOL:20}
+
+katar:
+  # Secrets come from the environment in production. The dev values below are
+  # deliberately obvious so they can never be mistaken for real ones.
+  pass-secret: ${KATAR_PASS_SECRET:dev-only-pass-secret-change-me}
+  ticket-secret: ${KATAR_TICKET_SECRET:dev-only-ticket-secret-change-me}
+  person-pepper: ${KATAR_PERSON_PEPPER:dev-only-pepper-change-me}
+  payment-secret: ${KATAR_PAYMENT_SECRET:dev-only-payment-secret-change-me}
+  hold-ttl: 10m
+  pass-ttl: 15m
+  max-seats-per-person: 4
+  admitter-interval: 1s
+  sweeper-interval: 5s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+server:
+  shutdown: graceful

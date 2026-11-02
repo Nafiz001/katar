@@ -1,0 +1,8 @@
+<configuration>
+  <include resource="org/springframework/boot/logging/logback/base.xml"/>
+  <logger name="io.zonky" level="WARN"/>
+  <logger name="org.flywaydb" level="WARN"/>
+  <logger name="org.springframework" level="WARN"/>
+  <logger name="com.zaxxer" level="WARN"/>
+  <root level="WARN"/>
+</configuration>
