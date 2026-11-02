@@ -5,6 +5,9 @@ for the Eid rush in Bangladesh: the morning sales open and hundreds of
 thousands of people press "buy" in the same second, every year, and every
 year the sites fall over.
 
+**Live demo: https://katar.130-210-37-18.sslip.io**. An hourly sale with a
+simulated crowd of a few hundred people in front of you.
+
 katar is built to stay up and stay fair through that. Its two hard problems:
 
 1. **A fair virtual waiting room**, in PostgreSQL alone. Everyone gets a place in
@@ -121,13 +124,20 @@ simultaneous joins getting tickets 1 to 2,000 with no gaps or repeats, the
 shuffle, expiry, idempotent retries, refunds, forged passes and tickets, and
 the whole purchase over HTTP.
 
-**Rush test** (`loadtest/`, k6): 800 people arriving within three seconds, each
+**Rush test** (`loadtest/`, k6): people arriving within three seconds, each
 joining, waiting, holding one or two seats on a random stretch, booking and
-paying. On a laptop that also runs k6 and PostgreSQL: **0 of 5,266 requests
-failed**, 678 bookings paid (978 seat-journeys on a 385-seat train), 407
-requests a second, and `check.sql` found **no seat sold twice and nobody over
-the limit**. The first run found something real: Tomcat's default accept
-backlog refused 576 of 800 simultaneous connections, now raised. Details in
+paying; then `check.sql` looks for any seat sold twice.
+
+- **On the live server** (Oracle Ampere A1, 2 cores, shared with the demo's
+  simulated crowd and other services): 300 people, **0 of 39,849 requests
+  failed**, a hold takes **5.7 ms** at the median and **59 ms** at p95, a join
+  465 ms median while everyone already waiting polls twice a second.
+- **On a laptop** that also runs k6 and PostgreSQL: 800 people, 0 of 5,266
+  requests failed, 678 bookings paid (978 seat-journeys on a 385-seat train).
+- **Every run:** no seat sold twice, and nobody over the four-seat limit.
+
+The first run found something real: Tomcat's default accept backlog refused
+576 of 800 simultaneous connections, now raised. Details in
 [loadtest/RESULTS.md](loadtest/RESULTS.md).
 
 ## API

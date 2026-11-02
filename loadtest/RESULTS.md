@@ -9,6 +9,25 @@ Windows 11) that runs k6's 800 virtual users, the JVM (384 MB heap) and
 PostgreSQL 18 at the same time. Read the latencies as a floor on what a real
 server does, not as its numbers.
 
+## 2026-11-02, the live server
+
+Oracle Ampere A1 (2 cores, 12 GB), with k6 running in a container on the same
+box, against the live demo sale: its real settings (5 admitted a second,
+behind the simulated crowd), so most of each person's time is the queue,
+working as designed.
+
+`docker run --network vernissage_default -e BASE=http://katar:8080 -e PEOPLE=300 grafana/k6 run - < loadtest/rush.js`
+
+| | |
+|---|---|
+| requests | 39,849, **0 failed** (most are people polling their place) |
+| throughput | 397 requests/s |
+| hold, median / p95 | **5.7 ms / 59 ms** |
+| join, median / p95 | 465 ms / 1.05 s |
+| bookings paid in the run | 195; "coach full" 109 |
+| time in the queue, average | 68 s (the sale admits 5 a second) |
+| check.sql over everything the server has sold (667 bookings) | 0 overlaps, 0 out of step, 0 over the limit |
+
 ## Correctness (every run)
 
 | check | result |
